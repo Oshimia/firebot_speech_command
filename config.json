@@ -1,0 +1,12 @@
+{
+    "trigger_words": [
+        "modbot",
+        "mudbutt"
+    ],
+    "url_mapping": {
+        "weather": "http://localhost:7472/api/v1/effects/preset/34d334d0-e83d-11ee-8f96-47962956d660",
+        "news": "http://localhost:7472/api/v1/effects/preset/d908eba0-ea39-11ee-aa1f-5d0215164734",
+        "music": "http://localhost:7472/api/v1/effects/preset/48948c60-ea42-11ee-9fbf-893a946518b2",
+        "display deaths": "http://localhost:7472/api/v1/effects/preset/34d334d0-e83d-11ee-8f96-47962956d660"
+    }
+}
