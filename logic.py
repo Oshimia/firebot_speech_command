@@ -4,6 +4,7 @@ import sys
 import speech_recognition as sr
 import psutil
 
+
 # Function to trigger URL using curl
 def trigger_url(url):
     try:
@@ -16,18 +17,64 @@ def terminate_process():
     print("Terminating...")
     sys.exit()
 
+def save_config(config):
+    with open("config.json", "w") as config_file:
+        json.dump(config, config_file, indent=4)
+
 # Function to load configuration from config.json
 def load_config():
     with open("config.json", "r") as config_file:
         config = json.load(config_file)
     return config
 
+def select_microphone():
+    mic_list = sr.Microphone.list_microphone_names()
+    unique_mic_names = set()  # Use a set to store unique microphone names
+    active_mics = []
+
+    for index, name in enumerate(mic_list):
+        if name not in unique_mic_names:
+            unique_mic_names.add(name)
+            try:
+                with sr.Microphone(device_index=index) as mic:
+                    # Attempt to initialize each microphone to check if it's active
+                    pass
+                active_mics.append((index, name))
+                print(f"{index}: {name}")
+            except:
+                # If initialization fails, the microphone is not available
+                pass
+
+    if not active_mics:
+        print("No active microphones found.")
+        return None
+
+    selected_index = int(input("Select the microphone index: "))
+    while selected_index not in [idx for idx, _ in active_mics]:
+        print("Invalid microphone index. Please select from the available options.")
+        selected_index = int(input("Select the microphone index: "))
+
+    return selected_index
+
 # Initialize recognizer outside the loop
 recognizer = sr.Recognizer()
+mic = sr.Microphone()
 
 # Function to listen to microphone
 def listen_microphone(config):
-    with sr.Microphone() as source:
+    mic_list = sr.Microphone.list_microphone_names()
+    microphone_name = config.get("microphone", "")
+    selected_mic_index = config.get("microphone_index", 0)
+    mic = sr.Microphone()
+
+    if selected_mic_index < len(mic_list):
+        mic_name = mic_list[selected_mic_index]
+        mic = sr.Microphone(device_index=selected_mic_index)
+    else:
+        print("Selected microphone index is out of range.")
+        return
+
+    with mic as source:
         print("Listening...")
 
         # Adjust ambient noise for better recognition
@@ -76,6 +123,17 @@ def check_firebot():
 # Continuous listening loop
 def main():
     config = load_config()
+
+    # Check if microphone configuration exists in config file
+    if "microphone_index" not in config:
+        print("No microphone configuration found in config file.")
+        selected_mic_index = select_microphone()
+        config["microphone_index"] = selected_mic_index
+        save_config(config)
+    else:
+        selected_mic_index = config["microphone_index"]
+        print(f"Using microphone index {selected_mic_index} from config file.")
+
     while True:
         listen_microphone(config)
         if not check_firebot():
