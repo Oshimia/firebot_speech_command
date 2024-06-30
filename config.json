@@ -23,7 +23,7 @@
     ],
     "url_mapping": {
         "say hello": "http://localhost:7472/api/v1/effects/preset/48948c60-ea42-11ee-9fbf-893a946518b2",
-        "say goodbye": "http://localhost:7472/api/v1/effects/preset/1f66a580-f8d4-11ee-8382-538d31484e28"
+        "say goodbye": "http://localhost:7472/api/v1/effects/preset/1f66a580-f8d4-11ee-8382-538d31484e28",
         "display deaths": "http://localhost:7472/api/v1/effects/preset/7ef62640-eb61-11ee-8ca4-0747625d087b",
         "add death": "http://localhost:7472/api/v1/effects/preset/5485e440-eb61-11ee-8ca4-0747625d087b",
         "start Discord": "http://localhost:7472/api/v1/effects/preset/b31cb380-f8d1-11ee-8035-27773889115f",
