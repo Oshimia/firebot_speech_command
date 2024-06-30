@@ -4,14 +4,33 @@ from tkinter.simpledialog import askstring
 import json
 import sys
 from logic import listen_microphone, load_config
+import speech_recognition as sr
 import threading
+
+def select_microphone():
+    mic_list = sr.Microphone.list_microphone_names()
+    unique_mic_names = set()  # Use a set to store unique microphone names
+    active_mics = []
+
+    for index, name in enumerate(mic_list):
+        if name not in unique_mic_names:
+            unique_mic_names.add(name)
+            try:
+                with sr.Microphone(device_index=index) as mic:
+                    # Attempt to initialize each microphone to check if it's active
+                    pass
+                active_mics.append(name)  # Append name instead of tuple (index, name)
+            except:
+                # If initialization fails, the microphone is not available
+                pass
+    return active_mics
 
 class GUI(tk.Tk):
     def __init__(self):
         super().__init__()
 
         self.title("Voice Command Interface")
-        self.geometry("800x400")
+        self.geometry("800x500")
 
         self.config = load_config()
 
@@ -63,6 +82,16 @@ class GUI(tk.Tk):
         self.command_remove_button = tk.Button(self.command_button_frame, text="Remove", command=self.remove_command)
         self.command_remove_button.pack(side=tk.LEFT, padx=5)
 
+        self.mic_label = tk.Label(self, text="Select Microphone:", font=("Arial", 12))
+        self.mic_label.pack(pady=5)
+
+        self.mic_combobox = ttk.Combobox(self)
+        self.mic_combobox.pack(pady=5)
+        self.select_microphone()  # Populate the combobox with available microphones
+
+        self.save_mic_button = tk.Button(self, text="Save Microphone", command=self.save_microphone_selection)
+        self.save_mic_button.pack(pady=5)
+
         self.terminate_button = tk.Button(self, text="Terminate", command=self.terminate_command)
         self.terminate_button.pack(pady=5)
 
@@ -78,6 +107,28 @@ class GUI(tk.Tk):
 
         # Start continuous listening
         self.listen_command()
+
+    def select_microphone(self):
+        active_mics = select_microphone()
+        self.mic_combobox['values'] = active_mics  # Update combobox with available microphones
+
+    def save_microphone_selection(self):
+        selected_microphone = self.mic_combobox.get()  # Get the selected microphone from the combobox
+        mic_list = sr.Microphone.list_microphone_names()
+        selected_index = mic_list.index(selected_microphone) if selected_microphone in mic_list else -1
+        
+        if selected_index != -1:
+            self.config["microphone_index"] = selected_index
+            self.config["microphone"] = selected_microphone
+            self.update_config()
+            messagebox.showinfo("Microphone Saved", "Microphone selection saved. GUI will close.")
+            self.restart_gui()
+        else:
+            messagebox.showerror("Error", "Selected microphone not found in available list.")
+
+    def restart_gui(self):
+        self.destroy()
+        main()
 
     def load_trigger_words(self):
         self.trigger_listbox.delete(0, tk.END)
@@ -174,6 +225,9 @@ class ConsoleRedirector:
     def write(self, text):
         self.console_output.insert(tk.END, text)
         self.console_output.see(tk.END)  # Scroll to the end of the text area
+
+    def flush(self):
+        pass  # No need to implement flush for this use case
 
 def main():
     app = GUI()
