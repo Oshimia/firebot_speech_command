@@ -1,0 +1,1 @@
+This should be placed in the same directory as the whisper.py script. When the whisper script triggers the Firebot URL you should then ask it to process this file for a transcript of what you said. 
