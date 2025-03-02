@@ -1,7 +1,6 @@
 {
     "trigger_words": [
         "modbot",
-        "testbot",
         "mudbutt",
         "not but",
         "modbod",
@@ -28,29 +27,23 @@
         "not about",
         "muppet",
         "moderator",
-        "motorized",
-        "moderate"
+        "moderate",
+        "motorized"
     ],
-    "TRIGGER_URL": "http://localhost:7472/api/v1/effects/preset/e9925db0-eb62-11ee-8ca4-0747625d087b",
+    "TRIGGER_URL": "http://localhost:7472/api/v1/effects/preset/48948c60-ea42-11ee-9fbf-893a946518b2",
     "WHISPER_API_URL": "https://api.openai.com/v1/audio/transcriptions",
     "OPENAI_API_KEY": "",
     "TRANSCRIPT_FILE": "whisperTranscript.txt",
     "USE_GOOGLE_CLOUD": false,
     "GOOGLE_CLOUD_CREDENTIALS": "None",
     "FIREBOT_REQUIRED": true,
-    "MIN_EXTRA_RECORDING_SECONDS": "3",
     "running": true,
     "termination_triggered": false,
-    "last_trigger_time": 0,
     "TRIGGER_COOLDOWN": 5.0,
-    "recent_trigger_words": [],
     "last_url_call_time": 0,
     "URL_CALL_COOLDOWN": 2.0,
-    "OVERLAP_SECONDS": 3.0,
-    "RECORDER_TRANSITION_DELAY": 0.2,
     "SILENCE_DURATION": 1.5,
-    "program_path": "C:\\Program Files\\obs-studio\\Stream resources\\FB_VC\\Updated VC\\V4\\whisper.exe",
     "auto_launch": false,
-    "target_program_path": "C:/Program Files/obs-studio/Stream resources/FB_VC/Updated VC/logic.py",
+    "program_path": "C:\\Program Files\\obs-studio\\Stream resources\\FB_VC\\Updated VC\\V4.5\\whisper.exe",
     "url_mapping": {}
 }
