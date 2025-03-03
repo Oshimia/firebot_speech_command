@@ -347,7 +347,7 @@ def process_recording_async(audio_data):
                 whisper_transcript = transcribe_audio(filename)
                 if whisper_transcript:
                     for word in TRIGGER_WORDS:
-                        if any(word in whisper_text for word in TRIGGER_WORDS) and ("terminate" in whisper_text or "determinate" in whisper_text):
+                        if any(word in whisper_transcript for word in TRIGGER_WORDS) and ("terminate" in whisper_transcript or "determinate" in whisper_transcript):
                             if not termination_triggered:
                                 termination_triggered = True
                                 print("Terminate command received from Whisper recognition")
