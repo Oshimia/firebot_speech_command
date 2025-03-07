@@ -18,20 +18,31 @@ if os.name == 'nt':
 # Get the application's base directory (works in both script and exe mode)
 def get_base_dir():
     if getattr(sys, 'frozen', False):
-        return os.path.dirname(sys.executable)
+        return sys._MEIPASS  # PyInstaller's temporary directory
     else:
         return os.path.dirname(os.path.abspath(__file__))
 
-def update_text_wrap(event, text_widget):
-    # Get the font used by the text widget.
-    font = tkFont.Font(font=text_widget.cget("font"))
-    # Estimate the average pixel width of a character (using "0" as a sample).
-    avg_char_width = font.measure("0")
-    # Compute the new number of characters that can fit in the widget's current width.
-    new_width = max(20, int(text_widget.winfo_width() / avg_char_width))
-    text_widget.config(width=new_width)
+def get_config_path():
+    # First try the executable's directory for a config file
+    executable_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
+    config_path = os.path.join(executable_dir, "config.json")
+    
+    # If config doesn't exist in executable directory, check the bundled config
+    if not os.path.exists(config_path) and getattr(sys, 'frozen', False):
+        bundled_config = os.path.join(sys._MEIPASS, "config.json")
+        if os.path.exists(bundled_config):
+            # Copy the bundled config to the executable directory if possible
+            try:
+                import shutil
+                shutil.copy2(bundled_config, config_path)
+                print(f"Copied bundled config to: {config_path}")
+            except Exception as e:
+                print(f"Could not copy bundled config: {e}")
+                config_path = bundled_config
+    
+    return config_path
 
-CONFIG_FILE = os.path.join(get_base_dir(), "config.json")
+CONFIG_FILE = get_config_path()
 
 def load_config():
     if os.path.exists(CONFIG_FILE):
@@ -46,7 +57,6 @@ def load_config():
         config = {}
     config.setdefault("program_path", "")
     config.setdefault("trigger_words", [])
-    config.setdefault("url_mapping", {})
     config.setdefault("auto_launch", False)
     return config
 
@@ -57,6 +67,15 @@ def save_config(config):
         print(f"Config saved to {CONFIG_FILE}")
     except Exception as e:
         print(f"Error saving config.json to {CONFIG_FILE}:", e)
+
+def update_text_wrap(event, text_widget):
+    # Get the font used by the text widget.
+    font = tkFont.Font(font=text_widget.cget("font"))
+    # Estimate the average pixel width of a character (using "0" as a sample).
+    avg_char_width = font.measure("0")
+    # Compute the new number of characters that can fit in the widget's current width.
+    new_width = max(20, int(text_widget.winfo_width() / avg_char_width))
+    text_widget.config(width=new_width)
 
 class GUI(tk.Tk):
     def __init__(self):
@@ -205,6 +224,7 @@ class GUI(tk.Tk):
 
         # Bind the mouse wheel to the canvas for the entire area.
         canvas.bind_all("<MouseWheel>", _on_mousewheel)
+        editor.protocol("WM_DELETE_WINDOW", lambda: [canvas.unbind_all("<MouseWheel>"), editor.destroy()])
 
         # Dictionaries to keep track of input widget references.
         self.general_vars = {}   # For booleans, ints, floats using StringVar/BooleanVar.
@@ -283,6 +303,12 @@ class GUI(tk.Tk):
                     self.config_data[key] = value
             else:
                 self.config_data[key] = value
+
+        for widget in editor_window.winfo_children():
+            if isinstance(widget, tk.Frame):
+                for child in widget.winfo_children():
+                    if isinstance(child, tk.Canvas):
+                        child.unbind_all("<MouseWheel>")
 
         save_config(self.config_data)
         self.program_path_var.set(self.config_data.get("program_path", ""))
