@@ -90,6 +90,10 @@ URL_CALL_COOLDOWN = float(config.get("URL_CALL_COOLDOWN", 2.0))
 SILENCE_DURATION = float(config.get("SILENCE_DURATION", 1.5))
 last_url_call_time = int(config.get("last_url_call_time", 0))
 FIREBOT_CHECK_INTERVAL = 5  # seconds
+GOOGLE_LANGUAGE = config.get("GOOGLE_LANGUAGE", "en-US")
+WHISPER_LANGUAGE = config.get("WHISPER_LANGUAGE", "en")
+# Google language codes can be found here: https://cloud.google.com/speech-to-text/docs/speech-to-text-supported-languages
+# Whisper language codes can be found here: https://en.wikipedia.org/wiki/List_of_ISO_639_language_codes
 
 # Global instances and buffers
 p_audio = None  # Global PyAudio instance
@@ -322,11 +326,12 @@ def process_recording_async(audio_data):
             google_transcript = recognizer.recognize_google_cloud(
                 audio,
                 credentials_json=GOOGLE_CLOUD_CREDENTIALS,
-                preferred_phrases=TRIGGER_WORDS
+                preferred_phrases=TRIGGER_WORDS,
+                language=GOOGLE_LANGUAGE
             ).lower()
             print("Initial transcript (Google Cloud):", google_transcript)
         else:
-            google_transcript = recognizer.recognize_google(audio).lower()
+            google_transcript = recognizer.recognize_google(audio, language=GOOGLE_LANGUAGE).lower()
             print("Initial transcript (Google):", google_transcript)
 
         # Check for termination command in the Google transcript
@@ -408,12 +413,12 @@ def transcribe_audio(filename):
         try:
             with open(filename, 'rb') as audio_file:
                 headers = {"Authorization": f"Bearer {OPENAI_API_KEY}"}
-                data = {"language": "en"}
+                data = {"language": WHISPER_LANGUAGE}
                 files = {
                     "file": audio_file,
                     "model": (None, "whisper-1")
                 }
-                response = requests.post(WHISPER_API_URL, headers=headers, files=files)
+                response = requests.post(WHISPER_API_URL, headers=headers, data=data, files=files)
                 response.raise_for_status()
                 return response.json().get("text", "").strip()
         except Exception as e:
@@ -424,7 +429,7 @@ def transcribe_audio(filename):
         try:
             with sr.AudioFile(filename) as source:
                 audio = recognizer.record(source)
-            transcript = recognizer.recognize_google(audio).lower()
+            transcript = recognizer.recognize_google(audio, language=GOOGLE_LANGUAGE).lower()
             return transcript
         except sr.UnknownValueError:
             print("Google Speech Recognition could not understand audio")
