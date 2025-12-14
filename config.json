@@ -30,10 +30,11 @@
         "moderate",
         "motorized"
     ],
-    "TRIGGER_URL": "http://localhost:7472/api/v1/effects/preset/48948c60-ea42-11ee-9fbf-893a946518b2",
+    "TRIGGER_URL": "http://localhost:7472/api/v1/effects/preset/cb179a60-f24d-11ef-b8a0-d169f395308d",
     "WHISPER_API_URL": "https://api.openai.com/v1/audio/transcriptions",
     "OPENAI_API_KEY": "",
     "TRANSCRIPT_FILE": "whisperTranscript.txt",
+    "WHISPER_HISTORY_FILE": "whisperHistory.txt",
     "USE_GOOGLE_CLOUD": false,
     "GOOGLE_CLOUD_CREDENTIALS": "None",
     "FIREBOT_REQUIRED": true,
@@ -44,7 +45,9 @@
     "URL_CALL_COOLDOWN": 2.0,
     "SILENCE_DURATION": 1.5,
     "auto_launch": false,
-    "program_path": "C:\\Program Files\\obs-studio\\Stream resources\\FB_VC\\Updated VC\\V4.6\\whisper.py",
+    "program_path": "c:\\Users\\admin\\source\\repos\\Firebot\\voiceControl\\whisper.py",
     "GOOGLE_LANGUAGE": "en-US",
-    "WHISPER_LANGUAGE": "en"
+    "WHISPER_LANGUAGE": "en",
+
+    "ENABLE_HISTORY": true
 }

@@ -1,1 +1,9 @@
 reference files
+personalMods
+modules/__pycache__
+whisperTranscript.txt
+modules/gui/__pycache__
+test_sr.py
+test_history.py
+whisperHistory.txt
+recording_*.wav
