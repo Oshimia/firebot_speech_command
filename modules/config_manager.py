@@ -48,11 +48,27 @@ def load_config():
     print(f"DEBUG: config_manager loading from: {CONFIG_FILE}")
     print(f"DEBUG: Loaded TRIGGER_URL: {config.get('TRIGGER_URL', 'Not Set')}")
     
+    # Migration: Check for legacy config and migrate to "triggers" list
+    if "triggers" not in config:
+        if "trigger_words" in config and config["trigger_words"]:
+            print("DEBUG: Migrating legacy trigger_words to new 'triggers' format.")
+            legacy_rule = {
+                "phrases": config["trigger_words"],
+                "url": config.get("TRIGGER_URL", "YOUR_URL_HERE"),
+                "cooldown": float(config.get("URL_CALL_COOLDOWN", 2.0))
+            }
+            config["triggers"] = [legacy_rule]
+        else:
+            config["triggers"] = []
+
     # Defaults
+    config.setdefault("triggers", [])
     config.setdefault("program_path", "")
-    config.setdefault("trigger_words", [])
     config.setdefault("auto_launch", False)
+    # Legacy defaults (kept to prevent errors if referenced, but triggers list is primary)
+    config.setdefault("trigger_words", []) 
     config.setdefault("TRIGGER_URL", "YOUR_URL_HERE")
+    
     config.setdefault("WHISPER_API_URL", "https://api.openai.com/v1/audio/transcriptions")
     config.setdefault("OPENAI_API_KEY", "API_KEY_HERE")
     config.setdefault("TRANSCRIPT_FILE", "whisperTranscript.txt")
@@ -97,4 +113,5 @@ WHISPER_LANGUAGE = config.get("WHISPER_LANGUAGE", "en")
 WHISPER_HISTORY_FILE = config.get("WHISPER_HISTORY_FILE", "whisperHistory.txt")
 ENABLE_HISTORY = config.get("ENABLE_HISTORY", True)
 HISTORY_LOG_PREFIX = config.get("HISTORY_LOG_PREFIX", "Oshimia")
+TRIGGERS = config.get("triggers", [])
 FIREBOT_CHECK_INTERVAL = 5

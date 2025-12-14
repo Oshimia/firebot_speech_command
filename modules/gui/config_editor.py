@@ -3,6 +3,7 @@ from tkinter import messagebox
 import json
 from modules.config_manager import save_config
 from modules.gui.utils import update_text_wrap
+from modules.gui.trigger_editor import TriggerEditor
 
 class ConfigEditor:
     def __init__(self, parent_window, config_data, on_save_callback):
@@ -43,10 +44,35 @@ class ConfigEditor:
         self.general_vars = {}   # For booleans, ints, floats using StringVar/BooleanVar.
         self.text_widgets = {}   # For multi-line strings, lists, and dicts.
 
+        # Define key ordering and visibility
+        priority_keys = ['triggers', 'ENABLE_HISTORY', 'HISTORY_LOG_PREFIX', 'WHISPER_HISTORY_FILE']
+        hidden_keys = ['trigger_words', 'TRIGGER_URL', 'URL_CALL_COOLDOWN', 'program_path', 'auto_launch', 'running', 'termination_triggered', 'last_url_call_time']
+
+        # Sort keys: priority first, then others alphabetically, excluding hidden
+        sorted_keys = []
+        # 1. Add priority keys if they exist
+        for key in priority_keys:
+            if key in self.config_data:
+                sorted_keys.append(key)
+        
+        # 2. Add remaining keys if not hidden and not already added
+        remaining_keys = sorted(self.config_data.keys())
+        for key in remaining_keys:
+            if key not in sorted_keys and key not in hidden_keys:
+                sorted_keys.append(key)
+
         row = 0
-        for key, value in self.config_data.items():
+        for key in sorted_keys:
+            value = self.config_data[key]
             tk.Label(form_frame, text=f"{key}:").grid(row=row, column=0, sticky=tk.NW, padx=5, pady=5)
-            if isinstance(value, bool):
+            
+            if key == "triggers":
+                 # Special handling for triggers list
+                 count = len(value) if isinstance(value, list) else 0
+                 btn_text = f"Manage Triggers ({count})"
+                 tk.Button(form_frame, text=btn_text, command=self.open_trigger_editor).grid(row=row, column=1, sticky=tk.W, padx=5, pady=5)
+                 
+            elif isinstance(value, bool):
                 var = tk.BooleanVar(value=value)
                 chk = tk.Checkbutton(form_frame, variable=var)
                 chk.grid(row=row, column=1, sticky=tk.W, padx=5, pady=5)
@@ -85,6 +111,18 @@ class ConfigEditor:
         tk.Button(bottom_frame, text="Save", command=self.save_config_changes,
                   fg="white", bg="blue").pack(side=tk.RIGHT, padx=5)
         tk.Button(bottom_frame, text="Close", command=self.editor.destroy).pack(side=tk.RIGHT, padx=5)
+
+
+    def open_trigger_editor(self):
+        triggers = self.config_data.get("triggers", [])
+        TriggerEditor(self.editor, triggers, self.update_triggers_data)
+
+    def update_triggers_data(self, new_triggers_list):
+        self.config_data["triggers"] = new_triggers_list
+        # Save immediately as requested
+        save_config(self.config_data)
+        # Notify user briefly or just log
+        print(f"Triggers updated and saved: {len(new_triggers_list)} rules.")
 
 
     def save_config_changes(self):

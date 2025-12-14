@@ -7,15 +7,14 @@ import speech_recognition as sr
 from modules.config_manager import (
     TRIGGER_WORDS, WHISPER_API_URL, OPENAI_API_KEY, 
     TRANSCRIPT_FILE, USE_GOOGLE_CLOUD, GOOGLE_CLOUD_CREDENTIALS,
-    TRANSCRIPT_FILE, USE_GOOGLE_CLOUD, GOOGLE_CLOUD_CREDENTIALS,
     GOOGLE_LANGUAGE, WHISPER_LANGUAGE, WHISPER_HISTORY_FILE, ENABLE_HISTORY,
-    HISTORY_LOG_PREFIX
+    HISTORY_LOG_PREFIX, TRIGGERS
 )
 from modules.utils import state
 from modules.trigger_handler import trigger_url_call
 from modules.history_manager import append_to_transcript_history
 
-print(f"DEBUG: transcriber.py loaded. TRIGGER_WORDS: {TRIGGER_WORDS}")
+print(f"DEBUG: transcriber.py loaded. TRIGGERS count: {len(TRIGGERS)}")
 
 def transcribe_audio(filename):
     """
@@ -76,12 +75,17 @@ def process_recording_async(audio_data):
         with sr.AudioFile(filename) as source:
             audio = recognizer.record(source)
         
+        # Flatten all trigger words for Google Cloud hints
+        all_trigger_phrases = []
+        for trigger_set in TRIGGERS:
+            all_trigger_phrases.extend(trigger_set.get("phrases", []))
+
         # Use Google or Google Cloud for initial transcription
         if USE_GOOGLE_CLOUD:
             google_transcript = recognizer.recognize_google_cloud(
                 audio,
                 credentials_json=GOOGLE_CLOUD_CREDENTIALS,
-                preferred_phrases=TRIGGER_WORDS,
+                preferred_phrases=all_trigger_phrases,
                 language=GOOGLE_LANGUAGE
             ).lower()
             print("Initial transcript (Google Cloud):", google_transcript)
@@ -90,71 +94,87 @@ def process_recording_async(audio_data):
             print("Initial transcript (Google):", google_transcript)
 
         transcript_for_history = google_transcript
-        final_transcript_for_action = google_transcript
+        
+        # Helper detection function
+        def check_termination(text):
+            for t_set in TRIGGERS:
+                for phrase in t_set.get("phrases", []):
+                    if phrase in text and ("terminate" in text or "determinate" in text):
+                        return True
+            return False
 
-        # Check for termination command in the Google transcript
-        for word in TRIGGER_WORDS:
-            if any(word in google_transcript for word in TRIGGER_WORDS) and ("terminate" in google_transcript or "determinate" in google_transcript):
-                if not state.termination_triggered:
-                    state.termination_triggered = True
-                    term_msg = f"TERMINATION via Google: {google_transcript}"
-                    print(term_msg)
-                    if ENABLE_HISTORY:
-                        append_to_transcript_history(term_msg, WHISPER_HISTORY_FILE, prefix=HISTORY_LOG_PREFIX)
-                    state.running = False
-                    return
+        # Check termination on Google transcript
+        if check_termination(google_transcript):
+             if not state.termination_triggered:
+                state.termination_triggered = True
+                term_msg = f"TERMINATION via Google: {google_transcript}"
+                print(term_msg)
+                if ENABLE_HISTORY:
+                    append_to_transcript_history(term_msg, WHISPER_HISTORY_FILE, prefix=HISTORY_LOG_PREFIX)
+                state.running = False
+                return
 
-        # Check if any trigger word exists in the transcript
-        found_trigger = any(word in google_transcript for word in TRIGGER_WORDS)
-        if found_trigger:
-            print("Trigger word detected!")
+        # Check detection on Google transcript
+        detected_triggers = []
+        any_trigger_found = False
+        
+        for t_set in TRIGGERS:
+            if any(phrase in google_transcript for phrase in t_set.get("phrases", [])):
+                detected_triggers.append(t_set)
+                any_trigger_found = True
+
+        final_transcript = google_transcript
+
+        if any_trigger_found:
+            print("Trigger word detected (Google)!")
             if OPENAI_API_KEY and OPENAI_API_KEY.strip() and OPENAI_API_KEY != "API_KEY_HERE":
                 print("Using Whisper API for detailed transcription...")
                 whisper_transcript = transcribe_audio(filename)
                 if whisper_transcript:
-                    transcript_for_history = whisper_transcript
-                    final_transcript_for_action = whisper_transcript
-                    
-                    # Check termination in Whisper transcript too
-                    for word in TRIGGER_WORDS:
-                        if any(word in whisper_transcript for word in TRIGGER_WORDS) and ("terminate" in whisper_transcript or "determinate" in whisper_transcript):
-                            if not state.termination_triggered:
-                                state.termination_triggered = True
-                                term_msg = f"TERMINATION via Whisper: {whisper_transcript}"
-                                print(term_msg)
-                                if ENABLE_HISTORY:
-                                    append_to_transcript_history(term_msg, WHISPER_HISTORY_FILE, prefix=HISTORY_LOG_PREFIX)
-                                state.running = False
-                                return
-                    
-                    print("Detailed transcript (Whisper):", whisper_transcript)
-                    try:
-                        with open(TRANSCRIPT_FILE, "w", encoding="utf-8") as f:
-                            f.write(whisper_transcript)
-                        threading.Thread(target=trigger_url_call, daemon=True).start()
-                        print("Triggered URL with Whisper transcript")
-                    except Exception as e:
-                        print(f"Error writing Whisper transcript: {e}")
+                     final_transcript = whisper_transcript
+                     transcript_for_history = whisper_transcript
+                     print("Detailed transcript (Whisper):", whisper_transcript)
+                     
+                     # Re-check termination on Whisper
+                     if check_termination(whisper_transcript):
+                         if not state.termination_triggered:
+                            state.termination_triggered = True
+                            term_msg = f"TERMINATION via Whisper: {whisper_transcript}"
+                            print(term_msg)
+                            if ENABLE_HISTORY:
+                                append_to_transcript_history(term_msg, WHISPER_HISTORY_FILE, prefix=HISTORY_LOG_PREFIX)
+                            state.running = False
+                            return
+                     
+                     # Re-detect triggers on Whisper (more accurate)
+                     detected_triggers = []
+                     for t_set in TRIGGERS:
+                        if any(phrase in whisper_transcript for phrase in t_set.get("phrases", [])):
+                            detected_triggers.append(t_set)
                 else:
-                    print("Whisper transcription failed, using Google transcript")
-                    try:
-                        with open(TRANSCRIPT_FILE, "w", encoding="utf-8") as f:
-                            f.write(google_transcript)
-                        threading.Thread(target=trigger_url_call, daemon=True).start()
-                        print("Triggered URL with Google transcript (Whisper fallback)")
-                    except Exception as e:
-                        print(f"Error writing Google transcript: {e}")
+                     print("Whisper transcription failed, using Google transcript")
             else:
-                print("No Whisper API key, using Google transcript")
+                 print("No Whisper API key, using Google transcript")
+
+            # Execute actions for detected triggers
+            if detected_triggers:
                 try:
                     with open(TRANSCRIPT_FILE, "w", encoding="utf-8") as f:
-                        f.write(google_transcript)
-                    threading.Thread(target=trigger_url_call, daemon=True).start()
-                    print("Triggered URL with Google transcript")
+                        f.write(final_transcript)
+                    
+                    for t_set in detected_triggers:
+                        url = t_set.get("url")
+                        cooldown = t_set.get("cooldown", 2.0)
+                        if url:
+                            threading.Thread(target=trigger_url_call, args=(url, cooldown), daemon=True).start()
+                            print(f"Triggered URL: {url} (Cooldown: {cooldown}s)")
                 except Exception as e:
-                    print(f"Error writing Google transcript: {e}")
+                    print(f"Error processing actions: {e}")
+            else:
+                print("No trigger words found in final transcript.")
+
         else:
-            print("No trigger word found in transcript")
+            print("No trigger word found in initial transcript")
             
         # Log to history if enabled and we have a transcript
         if ENABLE_HISTORY and transcript_for_history:
