@@ -1,0 +1,66 @@
+{
+    "TRIGGER_URL": "http://localhost:7472/api/v1/effects/preset/cb179a60-f24d-11ef-b8a0-d169f395308d",
+    "WHISPER_API_URL": "https://api.openai.com/v1/audio/transcriptions",
+    "OPENAI_API_KEY": "",
+    "TRANSCRIPT_FILE": "whisperTranscript.txt",
+    "WHISPER_HISTORY_FILE": "whisperHistory.txt",
+    "USE_GOOGLE_CLOUD": false,
+    "GOOGLE_CLOUD_CREDENTIALS": "None",
+    "FIREBOT_REQUIRED": true,
+    "running": true,
+    "termination_triggered": false,
+    "TRIGGER_COOLDOWN": 5.0,
+    "last_url_call_time": 0,
+    "URL_CALL_COOLDOWN": 2.0,
+    "SILENCE_DURATION": 1.5,
+    "auto_launch": false,
+    "program_path": "c:\\Users\\admin\\source\\repos\\Firebot\\voiceControl\\whisper.py",
+    "GOOGLE_LANGUAGE": "en-US",
+    "WHISPER_LANGUAGE": "en",
+    "ENABLE_HISTORY": true,
+    "HISTORY_LOG_PREFIX": "Oshimia",
+    "triggers": [
+        {
+            "phrases": [
+                "modbot",
+                "mudbutt",
+                "not but",
+                "modbod",
+                "mudblood",
+                "mudbug",
+                "mud ball",
+                "mud bath",
+                "mobot",
+                "mudbox",
+                "motherboard",
+                "modot",
+                "mud butt",
+                "mud bog",
+                "mud bot",
+                "mudbone",
+                "motorbike",
+                "mothball",
+                "not what",
+                "motorboat",
+                "modwot",
+                "what about",
+                "outboard",
+                "how about",
+                "not about",
+                "muppet",
+                "moderator",
+                "moderate",
+                "motorized"
+            ],
+            "url": "http://localhost:7472/api/v1/effects/preset/cb179a60-f24d-11ef-b8a0-d169f395308d",
+            "cooldown": 2.0
+        },
+        {
+            "phrases": [
+                "lights"
+            ],
+            "url": "http://localhost:7472/api/v1/effects/preset/d74506ca-7a9f-4835-9a78-9e24281bcb4e",
+            "cooldown": 2.0
+        }
+    ]
+}

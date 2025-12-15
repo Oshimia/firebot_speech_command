@@ -34,57 +34,71 @@ def load_config():
     """
     Load configuration from config.json.
     """
-    if os.path.exists(CONFIG_FILE):
-        try:
-            with open(CONFIG_FILE, "r") as f:
-                config = json.load(f)
-        except Exception as e:
-            print(f"Error reading config.json at {CONFIG_FILE}:", e)
-            config = {}
-    else:
-        # print(f"Config file not found at {CONFIG_FILE}, creating default config")
-        config = {}
-    
-    print(f"DEBUG: config_manager loading from: {CONFIG_FILE}")
-    print(f"DEBUG: Loaded TRIGGER_URL: {config.get('TRIGGER_URL', 'Not Set')}")
-    
-    # Migration: Check for legacy config and migrate to "triggers" list
-    if "triggers" not in config:
-        if "trigger_words" in config and config["trigger_words"]:
-            print("DEBUG: Migrating legacy trigger_words to new 'triggers' format.")
-            legacy_rule = {
-                "phrases": config["trigger_words"],
-                "url": config.get("TRIGGER_URL", "YOUR_URL_HERE"),
-                "cooldown": float(config.get("URL_CALL_COOLDOWN", 2.0))
-            }
-            config["triggers"] = [legacy_rule]
-        else:
-            config["triggers"] = []
+    config_file_path = CONFIG_FILE
+    default_config = {
+        "triggers": [],
+        "program_path": "",
+        "auto_launch": False,
+        "trigger_words": [],
+        "TRIGGER_URL": "YOUR_URL_HERE",
+        "WHISPER_API_URL": "https://api.openai.com/v1/audio/transcriptions",
+        "OPENAI_API_KEY": "API_KEY_HERE",
+        "TRANSCRIPT_FILE": "whisperTranscript.txt",
+        "USE_GOOGLE_CLOUD": False,
+        "GOOGLE_CLOUD_CREDENTIALS": "None",
+        "FIREBOT_REQUIRED": True,
+        "TRIGGER_COOLDOWN": 5.0,
+        "URL_CALL_COOLDOWN": 2.0,
+        "SILENCE_DURATION": 1.5,
+        "GOOGLE_LANGUAGE": "en-US",
+        "WHISPER_LANGUAGE": "en",
+        "WHISPER_HISTORY_FILE": "whisperHistory.txt",
+        "ENABLE_HISTORY": True,
+        "HISTORY_LOG_PREFIX": "Oshimia",
+        "REQUIRED_PROCESS_NAME": "firebot"
+    }
 
-    # Defaults
-    config.setdefault("triggers", [])
-    config.setdefault("program_path", "")
-    config.setdefault("auto_launch", False)
-    # Legacy defaults (kept to prevent errors if referenced, but triggers list is primary)
-    config.setdefault("trigger_words", []) 
-    config.setdefault("TRIGGER_URL", "YOUR_URL_HERE")
+    if not os.path.exists(config_file_path):
+        print(f"INFO: {config_file_path} not found. Creating a default one.")
+        try:
+            with open(config_file_path, "w", encoding="utf-8") as cf: json.dump(default_config, cf, indent=4)
+            print(f"Created a default {config_file_path}. Please edit it with your settings and API keys.")
+        except Exception as e: print(f"CRITICAL: Could not create default {config_file_path}: {e}. Exiting."); sys.exit(1)
+        print("Please configure config.json and restart the script."); sys.exit(0)
     
-    config.setdefault("WHISPER_API_URL", "https://api.openai.com/v1/audio/transcriptions")
-    config.setdefault("OPENAI_API_KEY", "API_KEY_HERE")
-    config.setdefault("TRANSCRIPT_FILE", "whisperTranscript.txt")
-    config.setdefault("USE_GOOGLE_CLOUD", False)
-    config.setdefault("GOOGLE_CLOUD_CREDENTIALS", "None")
-    config.setdefault("FIREBOT_REQUIRED", True)
-    config.setdefault("TRIGGER_COOLDOWN", 5.0)
-    config.setdefault("URL_CALL_COOLDOWN", 2.0)
-    config.setdefault("SILENCE_DURATION", 1.5)
-    config.setdefault("GOOGLE_LANGUAGE", "en-US")
-    config.setdefault("WHISPER_LANGUAGE", "en")
-    config.setdefault("WHISPER_HISTORY_FILE", "whisperHistory.txt")
-    config.setdefault("ENABLE_HISTORY", True)
-    config.setdefault("HISTORY_LOG_PREFIX", "Oshimia")
-    
-    return config
+    try:
+        with open(config_file_path, "r", encoding="utf-8") as config_file:
+            config = json.load(config_file)
+            
+            # --- Auto-Migration Logic ---
+            # 1. Migrate legacy trigger_words to new triggers list
+            if "triggers" not in config:
+                config["triggers"] = []
+                # Only migrate if old keys exist
+                legacy_words = config.get("trigger_words", [])
+                legacy_url = config.get("TRIGGER_URL", "")
+                
+                if legacy_words or legacy_url:
+                    print(f"DEBUG: Migrating legacy trigger_words to new 'triggers' format.")
+                    new_rule = {
+                        "phrases": legacy_words if legacy_words else ["computer"],
+                        "url": legacy_url,
+                        "cooldown": float(config.get("URL_CALL_COOLDOWN", 2.0))
+                    }
+                    config["triggers"].append(new_rule)
+                    # We don't remove the old keys to avoid breaking generic get() calls elsewhere immediately,
+                    # but the new system will prioritize 'triggers'.
+                    # Optimally, we save the migrated config back immediately?
+                    # For now, let's just use it in memory. If user saves via GUI, it persists.
+            
+            # 2. Add defaults if missing (for new fields)
+            for key, value in default_config.items():
+                config.setdefault(key, value)
+
+            return config
+
+    except json.JSONDecodeError as e: print(f"CRITICAL: Error decoding {config_file_path}: {e}. Exiting."); sys.exit(1)
+    except Exception as e: print(f"CRITICAL: Could not read {config_file_path}: {e}. Exiting."); sys.exit(1)
 
 def save_config(config):
     try:
@@ -97,21 +111,21 @@ def save_config(config):
 config = load_config()
 
 # Configurable settings exposed as constants for compatibility
-TRIGGER_WORDS = config.get("trigger_words", [])
-TRIGGER_URL = config.get("TRIGGER_URL", "YOUR_URL_HERE")
+TRIGGER_WORDS = config.get("trigger_words", ["computer"])
+TRIGGER_URL = config.get("TRIGGER_URL", "")
 WHISPER_API_URL = config.get("WHISPER_API_URL", "https://api.openai.com/v1/audio/transcriptions")
-OPENAI_API_KEY = config.get("OPENAI_API_KEY", "API_KEY_HERE")
+OPENAI_API_KEY = config.get("OPENAI_API_KEY", "")
 TRANSCRIPT_FILE = config.get("TRANSCRIPT_FILE", "whisperTranscript.txt")
+WHISPER_HISTORY_FILE = config.get("WHISPER_HISTORY_FILE", "whisperHistory.txt")
+ENABLE_HISTORY = config.get("ENABLE_HISTORY", True)
+HISTORY_LOG_PREFIX = config.get("HISTORY_LOG_PREFIX", "")
 USE_GOOGLE_CLOUD = config.get("USE_GOOGLE_CLOUD", False)
-GOOGLE_CLOUD_CREDENTIALS = config.get("GOOGLE_CLOUD_CREDENTIALS", "None")
-FIREBOT_REQUIRED = config.get("FIREBOT_REQUIRED", True)
-TRIGGER_COOLDOWN = float(config.get("TRIGGER_COOLDOWN", 5.0))
+GOOGLE_CLOUD_CREDENTIALS = config.get("GOOGLE_CLOUD_CREDENTIALS", "")
+FIREBOT_REQUIRED = config.get("FIREBOT_REQUIRED", False)
+REQUIRED_PROCESS_NAME = config.get("REQUIRED_PROCESS_NAME", "firebot")
 URL_CALL_COOLDOWN = float(config.get("URL_CALL_COOLDOWN", 2.0))
 SILENCE_DURATION = float(config.get("SILENCE_DURATION", 1.5))
 GOOGLE_LANGUAGE = config.get("GOOGLE_LANGUAGE", "en-US")
 WHISPER_LANGUAGE = config.get("WHISPER_LANGUAGE", "en")
-WHISPER_HISTORY_FILE = config.get("WHISPER_HISTORY_FILE", "whisperHistory.txt")
-ENABLE_HISTORY = config.get("ENABLE_HISTORY", True)
-HISTORY_LOG_PREFIX = config.get("HISTORY_LOG_PREFIX", "Oshimia")
 TRIGGERS = config.get("triggers", [])
 FIREBOT_CHECK_INTERVAL = 5
